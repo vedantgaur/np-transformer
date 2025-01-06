@@ -1,6 +1,6 @@
 import numpy as np
 
-from attention import multi_headed_attn
+from attention import self_attention, cross_attention
 from encoder import layer_norm
 from feedforward import ff
 
@@ -20,27 +20,4 @@ def decoder(x, enc_output, d_ff, d_model, h):
     layer_norm_ffn = layer_norm(layer_norm_cross_attn+ffn_output)
 
     return layer_norm_ffn
-
-def self_attention(x, d_model, h):
-    W_Q = np.random.randn(d_model, d_model // h)
-    W_K = np.random.randn(d_model, d_model // h)
-    W_V = np.random.randn(d_model, d_model // h)
-
-    Q = x @ W_Q
-    K = x @ W_K
-    V = x @ W_V
-
-    return multi_headed_attn(Q, K, V, h, d_model)
-
-def cross_attention(x, enc_output, d_model, h):
-    W_Q = np.random.randn(d_model, d_model // h)
-    W_K = np.random.randn(d_model, d_model // h)
-    W_V = np.random.randn(d_model, d_model // h)
-
-    Q = x @ W_Q
-    K = enc_output @ W_K
-    V = enc_output @ W_V
-
-    return multi_headed_attn(Q, K, V, h, d_model)
-
 
