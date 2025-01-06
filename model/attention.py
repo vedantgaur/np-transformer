@@ -1,5 +1,8 @@
 import numpy as np
 
+def softmax(x):
+    np.exp(x - np.max(x)) / np.sum(np.exp(x - np.max(x)), axis=-1, keepdims=True)
+
 def scaled_dp_attn(Q, K, V, mask=None):
     dp = Q @ K.transpose(0, 2, 1)
     scaled_dp = dp / np.sqrt(np.shape(K)[-1])
@@ -11,7 +14,7 @@ def scaled_dp_attn(Q, K, V, mask=None):
         print("Scaled DP (after applying mask):")
         print(scaled_dp)
     
-    softmax = np.exp(scaled_dp - np.max(scaled_dp)) / np.sum(np.exp(scaled_dp - np.max(scaled_dp)), axis=-1, keepdims=True)
+    softmax = softmax(scaled_dp)
     print("Softmax:")
     print(softmax)
 
