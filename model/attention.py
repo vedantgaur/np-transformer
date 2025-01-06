@@ -64,6 +64,25 @@ def cross_attention(x, enc_output, d_model, h):
 
     return multi_headed_attn(Q, K, V, h, d_model)
 
+def attention_backprop(Q, K, V, grad_attention, h, d_model):
+    dp = Q @ K.transpose(0, 2, 1)
+    scaled_dp = dp / np.sqrt(K.shape[-1])
+    softmax_output = np.exp(scaled_dp) / np.sum(np.exp(scaled_dp), axis=-1, keepdims=True)
+
+    grad_softmax = np.diagflat(softmax_output) - np.outer(softmax_output, softmax_output)
+
+    grad_attention = grad_attention @ grad_softmax
+
+    grad_V = grad_attention.T @ Q
+    grad_K = grad_attention.T @ K
+    grad_Q = grad_attention @ V
+
+    grad_Q = grad_Q.reshape(h, grad_Q.shape[0], grad_Q.shape[1] // h).transpose(0, 2, 1)
+    grad_K = grad_K.reshape(h, grad_K.shape[0], grad_K.shape[1] // h).transpose(0, 2, 1)
+    grad_V = grad_V.reshape(h, grad_V.shape[0], grad_V.shape[1] // h).transpose(0, 2, 1)
+
+    return grad_Q, grad_K, grad_V
+
 if __name__ == "__main__":
     batch_size = 1
     seq_length = 5
