@@ -1,25 +1,18 @@
 import numpy as np
 
 def softmax(x):
-    np.exp(x - np.max(x)) / np.sum(np.exp(x - np.max(x)), axis=-1, keepdims=True)
+    exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
+    return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
 
 def scaled_dp_attn(Q, K, V, mask=None):
     dp = Q @ K.transpose(0, 2, 1)
     scaled_dp = dp / np.sqrt(np.shape(K)[-1])
-    print("Scaled DP (before applying mask):")
-    print(scaled_dp)
 
     if mask is not None:
         scaled_dp += mask
-        print("Scaled DP (after applying mask):")
-        print(scaled_dp)
     
-    softmax = softmax(scaled_dp)
-    print("Softmax:")
-    print(softmax)
-
-
-    return softmax @ V
+    attn_weights = softmax(scaled_dp)
+    return attn_weights @ V
 
 def multi_headed_attn(Q, K, V, h: int, d_model: int, mask=None):
     batch_size, seq_len, d_k = Q.shape
@@ -94,4 +87,4 @@ if __name__ == "__main__":
     Q = K = V = x
 
     attention_output = multi_headed_attn(Q, K, V, h, d_model, mask)
-    print("Attention Output Shape:", attention_output.shape)
+    print("Attention Output Shape:", attention_output.shape) 

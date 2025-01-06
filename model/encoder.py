@@ -2,6 +2,8 @@ import numpy as np
 
 from attention import multi_headed_attn
 from feedforward import ff
+from attention import attention_backprop
+from feedforward import ff_backprop
 
 def multi_layer_encoder(x, d_ff, d_model, h, num_layers):
     for _ in range(num_layers):
@@ -36,3 +38,33 @@ def layer_norm(x, gamma=1, beta=0):
 
     x_norm = (x - mean) / np.sqrt(var + 1e-8)
     return x_norm*gamma + beta
+
+def encoder_backward(grad_output, d_ff, d_model, h):
+    grad_ff_weights = ff_backprop(grad_output, d_ff, d_model, grad_output)
+    grad_pre_ff = grad_ff_weights[-1]
+    
+    grad_ln = layer_norm_backward(grad_pre_ff)
+    
+    batch_size = grad_ln.shape[0]
+    
+    W_Q = np.random.randn(d_model, d_model)
+    W_K = np.random.randn(d_model, d_model)
+    W_V = np.random.randn(d_model, d_model)
+    
+    Q = grad_ln @ W_Q
+    K = grad_ln @ W_K
+    V = grad_ln @ W_V
+    
+    grad_Q, grad_K, grad_V = attention_backprop(Q, K, V, grad_ln, h, d_model)
+    
+    grad_x = (grad_Q @ W_Q.T + grad_K @ W_K.T + grad_V @ W_V.T) / 3
+    
+    return grad_x
+
+def layer_norm_backward(grad_output, gamma=1):
+    mean = np.mean(grad_output, axis=-1, keepdims=True)
+    var = np.var(grad_output, axis=-1, keepdims=True)
+    
+    grad_x = gamma * (grad_output - mean) / np.sqrt(var + 1e-8)
+    
+    return grad_x
