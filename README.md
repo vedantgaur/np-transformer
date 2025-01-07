@@ -12,21 +12,21 @@ This implementation includes:
 - Positional encoding
 
 ## Project Structure
-├── model/
-│ ├── transformer.py # Main Transformer implementation
-│ ├── encoder.py # Transformer encoder
-│ ├── decoder.py # Transformer decoder
-│ ├── attention.py # Multi-head attention mechanism
-│ └── feedforward.py # Position-wise feedforward network
-├── data/
-│ └── dataset.py # Dataset handling
-├── experiments/
-│ ├── train.py # Training loop
-│ └── test.py # Testing and evaluation
-├── utils/
-│ └── losses.py # Loss functions
-├── requirements.txt
-└── README.md
+├── model/\
+│ ├── transformer.py # Main Transformer implementation\
+│ ├── encoder.py # Transformer encoder\
+│ ├── decoder.py # Transformer decoder\
+│ ├── attention.py # Multi-head attention mechanism\
+│ └── feedforward.py # Position-wise feedforward network\
+├── data/\
+│ └── dataset.py # Dataset handling\
+├── experiments/\
+│ ├── train.py # Training loop\
+│ └── test.py # Testing and evaluation\
+├── utils/\
+│ └── losses.py # Loss functions\
+├── requirements.txt\
+└── README.md\
 
 ## Installation
 ```
