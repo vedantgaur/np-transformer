@@ -12,6 +12,8 @@ def train(model, train_dataset, val_dataset, num_epochs, learning_rate):
     print(f"Number of epochs: {num_epochs}")
     print(f"Learning rate: {learning_rate}")
     
+    model.learning_rate = learning_rate  
+    
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
         total_loss = 0

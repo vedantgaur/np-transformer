@@ -4,7 +4,7 @@ from model.encoder import encoder, encoder_backward
 
 
 class Transformer:
-    def __init__(self, d_model, d_ff, h, num_encoder_layers, num_decoder_layers, vocab_size, max_seq_len):
+    def __init__(self, d_model, d_ff, h, num_encoder_layers, num_decoder_layers, vocab_size, max_seq_len, learning_rate=0.0001):
         self.d_model = d_model
         self.d_ff = d_ff
         self.h = h
@@ -12,6 +12,7 @@ class Transformer:
         self.num_decoder_layers = num_decoder_layers
         self.vocab_size = vocab_size
         self.max_seq_len = max_seq_len
+        self.learning_rate = learning_rate
 
         self.embedding = np.random.normal(
             0, np.sqrt(2.0 / (vocab_size + d_model)), 
@@ -119,8 +120,8 @@ class Transformer:
         grad_src = grad_src_embed.reshape(-1, self.d_model).T @ src_one_hot.reshape(-1, self.vocab_size)
         grad_tgt = grad_tgt_embed.reshape(-1, self.d_model).T @ tgt_one_hot.reshape(-1, self.vocab_size)
         
-        grad_embedding = np.zeros((self.vocab_size, self.d_model))
-        grad_embedding[:grad_output.shape[0]] = grad_output.reshape(-1, self.d_model)
+        batch_size, seq_len, _ = grad_output.shape
+        grad_embedding = grad_output.reshape(batch_size * seq_len, -1) @ np.eye(self.vocab_size, self.d_model)
         
         grad_src = grad_src.T
         grad_tgt = grad_tgt.T
