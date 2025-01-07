@@ -13,35 +13,34 @@ class Transformer:
         self.vocab_size = vocab_size
         self.max_seq_len = max_seq_len
         self.learning_rate = learning_rate
-
-        self.embedding = np.random.normal(
-            0, np.sqrt(2.0 / (vocab_size + d_model)), 
-            (vocab_size, d_model)
-        )
         
-        self.positional_encoding = self.generate_positional_encoding(max_seq_len, d_model)
-
+        # Xavier/Glorot initialization for embeddings
+        embedding_scale = np.sqrt(2.0 / (vocab_size + d_model))
+        self.embedding = np.random.normal(0, embedding_scale, (vocab_size, d_model))
+        
+        self.positional_encoding = self._create_positional_encoding()
+        
         self.encoder_layers = [{
-            'W_Q': np.random.normal(0, 0.02, (d_model, d_model)),
-            'W_K': np.random.normal(0, 0.02, (d_model, d_model)),
-            'W_V': np.random.normal(0, 0.02, (d_model, d_model)),
-            'W_O': np.random.normal(0, 0.02, (d_model, d_model)),
-            'W_1': np.random.normal(0, 0.02, (d_model, d_ff)),
-            'W_2': np.random.normal(0, 0.02, (d_ff, d_model)),
+            'W_Q': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'W_K': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'W_V': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'W_O': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'W_1': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_ff)),
+            'W_2': np.random.normal(0, np.sqrt(2.0 / d_ff), (d_ff, d_model)),
             'b_1': np.zeros(d_ff),
             'b_2': np.zeros(d_model),
         } for _ in range(num_encoder_layers)]
-
+        
         self.decoder_layers = [{
-            'self_W_Q': np.random.normal(0, 0.02, (d_model, d_model)),
-            'self_W_K': np.random.normal(0, 0.02, (d_model, d_model)),
-            'self_W_V': np.random.normal(0, 0.02, (d_model, d_model)),
-            'cross_W_Q': np.random.normal(0, 0.02, (d_model, d_model)),
-            'cross_W_K': np.random.normal(0, 0.02, (d_model, d_model)),
-            'cross_W_V': np.random.normal(0, 0.02, (d_model, d_model)),
-            'W_O': np.random.normal(0, 0.02, (d_model, d_model)),
-            'W_1': np.random.normal(0, 0.02, (d_model, d_ff)),
-            'W_2': np.random.normal(0, 0.02, (d_ff, d_model)),
+            'self_W_Q': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'self_W_K': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'self_W_V': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'cross_W_Q': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'cross_W_K': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'cross_W_V': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'W_O': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_model)),
+            'W_1': np.random.normal(0, np.sqrt(2.0 / d_model), (d_model, d_ff)),
+            'W_2': np.random.normal(0, np.sqrt(2.0 / d_ff), (d_ff, d_model)),
             'b_1': np.zeros(d_ff),
             'b_2': np.zeros(d_model),
         } for _ in range(num_decoder_layers)]
@@ -87,6 +86,10 @@ class Transformer:
         return logits
     
     def backward(self, src, tgt, grad_output):
+        grad_norm = np.sqrt(np.sum(grad_output ** 2))
+        if grad_norm > 1.0:
+            grad_output = grad_output / grad_norm
+        
         grad_embedding = grad_output @ np.eye(self.vocab_size)
         grad_dec_output = grad_output @ self.embedding
 
@@ -137,6 +140,9 @@ class Transformer:
             grad_src + grad_tgt + full_grad_embedding
         )
 
+        for key in [grad_src, grad_tgt, full_grad_embedding]:
+            np.clip(key, -1.0, 1.0, out=key)
+        
         return {
             'grad_embedding': full_grad_embedding,
             'grad_src_embed': grad_src_embed,
@@ -176,7 +182,6 @@ class Transformer:
         """Load model parameters from a file"""
         model_state = np.load(filepath, allow_pickle=True).item()
         
-        # Verify hyperparameters match
         for key, value in model_state['hyperparameters'].items():
             if getattr(self, key) != value:
                 raise ValueError(f"Model parameter mismatch: {key} "

@@ -7,11 +7,14 @@ class TransformerDataset:
         self.n_samples = len(src_data)
         
     def __len__(self):
-        return (self.n_samples + self.batch_size - 1) // self.batch_size
+        return self.n_samples // self.batch_size
     
     def __getitem__(self, idx):
+        if idx >= len(self):
+            raise IndexError("Index out of bounds")
+            
         start_idx = idx * self.batch_size
-        end_idx = min((idx + 1) * self.batch_size, self.n_samples)
+        end_idx = start_idx + self.batch_size
         
         src_batch = self.src_data[start_idx:end_idx]
         tgt_batch = self.tgt_data[start_idx:end_idx]

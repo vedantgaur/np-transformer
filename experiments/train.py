@@ -10,55 +10,64 @@ from data.dataset import TransformerDataset
 def train(model, train_dataset, val_dataset, num_epochs, learning_rate, save_dir='checkpoints'):
     print("\nStarting training...")
     print(f"Number of epochs: {num_epochs}")
-    print(f"Learning rate: {learning_rate}")
+    print(f"Initial learning rate: {learning_rate}")
+    print(f"Total batches per epoch: {len(train_dataset)}")
     
     os.makedirs(save_dir, exist_ok=True)
     
-    model.learning_rate = learning_rate
+    warmup_steps = 4000
+    min_lr = learning_rate / 100
+    
     best_val_loss = float('inf')
+    patience = 5
+    patience_counter = 0
     
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
         total_loss = 0
-        num_batches = 0
+        num_batches = len(train_dataset)
         
-        for i, (src, tgt_input, tgt_y) in enumerate(train_dataset):
-            print(f"\nBatch {i+1}")
-            print(f"Source shape: {src.shape}")
-            print(f"Target input shape: {tgt_input.shape}")
-            print(f"Target output shape: {tgt_y.shape}")
+        for i in range(num_batches):
+            step = epoch * num_batches + i
+            if step < warmup_steps:
+                current_lr = learning_rate * (step / warmup_steps)
+            else:
+                current_lr = max(min_lr, learning_rate * 0.99 ** (step - warmup_steps))
+            
+            model.learning_rate = current_lr
+            
+            src, tgt_input, tgt_y = train_dataset[i]
             
             logits = model.forward(src, tgt_input)
-            print(f"Logits shape: {logits.shape}")
-            
             loss = cross_entropy_loss(logits.reshape(-1, logits.shape[-1]), tgt_y.reshape(-1))
-            print(f"Batch loss: {loss:.4f}")
-            
-            grad_output = softmax_grad(logits, tgt_y)
-            print(f"Gradient output shape: {grad_output.shape}")
-            
-            gradients = model.backward(src, tgt_input, grad_output)
-            print("Gradient shapes:")
-            for key, grad in gradients.items():
-                print(f"  {key}: {grad.shape}")
-            
-            total_loss += loss
-            num_batches += 1
             
             if i % 10 == 0:
-                print(f"Batch {i+1}, Loss: {loss:.4f}")
+                print(f"\nBatch {i+1}/{num_batches}")
+                print(f"Loss: {loss:.4f}")
+                print(f"Learning rate: {current_lr:.6f}")
+            
+            grad_output = softmax_grad(logits, tgt_y)
+            model.backward(src, tgt_input, grad_output)
+            
+            total_loss += loss
         
         avg_loss = total_loss / num_batches
         print(f"\nEpoch {epoch+1} - Average loss: {avg_loss:.4f}")
         
+        # Validation
         val_loss = validate(model, val_dataset)
         print(f"Validation loss: {val_loss:.4f}")
         
+        # Early stopping
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            save_path = os.path.join(save_dir, f'model_epoch_{epoch+1}_loss_{val_loss:.4f}.npy')
-            model.save_model(save_path)
-            print(f"New best model saved: {save_path}")
+            model.save_model(f"{save_dir}/best_model.npy")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print("\nEarly stopping triggered!")
+                break
 
 def validate(model, val_dataloader):
     model.eval()
