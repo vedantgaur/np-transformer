@@ -121,17 +121,24 @@ class Transformer:
         grad_tgt = grad_tgt_embed.reshape(-1, self.d_model).T @ tgt_one_hot.reshape(-1, self.vocab_size)
         
         batch_size, seq_len, _ = grad_output.shape
-        grad_embedding = grad_output.reshape(batch_size * seq_len, -1) @ np.eye(self.vocab_size, self.d_model)
+        full_grad_embedding = np.zeros((self.vocab_size, self.d_model))
+        
+        token_grads = grad_output.reshape(-1, self.vocab_size)
+        
+        token_indices = token_grads.argmax(axis=1)
+        
+        for idx, token_idx in enumerate(token_indices):
+            full_grad_embedding[token_idx] += token_grads[idx, token_idx] * self.embedding[token_idx]
         
         grad_src = grad_src.T
         grad_tgt = grad_tgt.T
         
         self.embedding -= self.learning_rate * (
-            grad_src + grad_tgt + grad_embedding
+            grad_src + grad_tgt + full_grad_embedding
         )
 
         return {
-            'grad_embedding': grad_embedding,
+            'grad_embedding': full_grad_embedding,
             'grad_src_embed': grad_src_embed,
             'grad_tgt_embed': grad_tgt_embed
         }
