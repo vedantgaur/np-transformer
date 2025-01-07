@@ -7,12 +7,15 @@ from model.transformer import Transformer
 from model.utils import cross_entropy_loss, softmax_grad
 from data.dataset import TransformerDataset
 
-def train(model, train_dataset, val_dataset, num_epochs, learning_rate):
+def train(model, train_dataset, val_dataset, num_epochs, learning_rate, save_dir='checkpoints'):
     print("\nStarting training...")
     print(f"Number of epochs: {num_epochs}")
     print(f"Learning rate: {learning_rate}")
     
-    model.learning_rate = learning_rate  
+    os.makedirs(save_dir, exist_ok=True)
+    
+    model.learning_rate = learning_rate
+    best_val_loss = float('inf')
     
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
@@ -25,15 +28,12 @@ def train(model, train_dataset, val_dataset, num_epochs, learning_rate):
             print(f"Target input shape: {tgt_input.shape}")
             print(f"Target output shape: {tgt_y.shape}")
             
-            # Forward pass
             logits = model.forward(src, tgt_input)
             print(f"Logits shape: {logits.shape}")
             
-            # Compute loss
             loss = cross_entropy_loss(logits.reshape(-1, logits.shape[-1]), tgt_y.reshape(-1))
             print(f"Batch loss: {loss:.4f}")
             
-            # Backward pass
             grad_output = softmax_grad(logits, tgt_y)
             print(f"Gradient output shape: {grad_output.shape}")
             
@@ -51,9 +51,14 @@ def train(model, train_dataset, val_dataset, num_epochs, learning_rate):
         avg_loss = total_loss / num_batches
         print(f"\nEpoch {epoch+1} - Average loss: {avg_loss:.4f}")
         
-        # Validation
         val_loss = validate(model, val_dataset)
         print(f"Validation loss: {val_loss:.4f}")
+        
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            save_path = os.path.join(save_dir, f'model_epoch_{epoch+1}_loss_{val_loss:.4f}.npy')
+            model.save_model(save_path)
+            print(f"New best model saved: {save_path}")
 
 def validate(model, val_dataloader):
     model.eval()

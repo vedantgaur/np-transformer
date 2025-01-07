@@ -151,4 +151,65 @@ class Transformer:
         """Set the model to evaluation mode"""
         self.training = False
     
+    def save_model(self, filepath):
+        """Save all model parameters to a file"""
+        model_state = {
+            'embedding': self.embedding,
+            'positional_encoding': self.positional_encoding,
+            'encoder_layers': self.encoder_layers,
+            'decoder_layers': self.decoder_layers,
+            'hyperparameters': {
+                'd_model': self.d_model,
+                'd_ff': self.d_ff,
+                'h': self.h,
+                'num_encoder_layers': self.num_encoder_layers,
+                'num_decoder_layers': self.num_decoder_layers,
+                'vocab_size': self.vocab_size,
+                'max_seq_len': self.max_seq_len,
+                'learning_rate': self.learning_rate
+            }
+        }
+        np.save(filepath, model_state)
+        print(f"Model saved to {filepath}")
+
+    def load_model(self, filepath):
+        """Load model parameters from a file"""
+        model_state = np.load(filepath, allow_pickle=True).item()
+        
+        # Verify hyperparameters match
+        for key, value in model_state['hyperparameters'].items():
+            if getattr(self, key) != value:
+                raise ValueError(f"Model parameter mismatch: {key} "
+                               f"(expected {getattr(self, key)}, got {value})")
+        
+        self.embedding = model_state['embedding']
+        self.positional_encoding = model_state['positional_encoding']
+        self.encoder_layers = model_state['encoder_layers']
+        self.decoder_layers = model_state['decoder_layers']
+        print(f"Model loaded from {filepath}")
+
+    @classmethod
+    def from_pretrained(cls, filepath):
+        """Create a new model instance from saved parameters"""
+        model_state = np.load(filepath, allow_pickle=True).item()
+        params = model_state['hyperparameters']
+        
+        model = cls(
+            d_model=params['d_model'],
+            d_ff=params['d_ff'],
+            h=params['h'],
+            num_encoder_layers=params['num_encoder_layers'],
+            num_decoder_layers=params['num_decoder_layers'],
+            vocab_size=params['vocab_size'],
+            max_seq_len=params['max_seq_len'],
+            learning_rate=params['learning_rate']
+        )
+        
+        model.embedding = model_state['embedding']
+        model.positional_encoding = model_state['positional_encoding']
+        model.encoder_layers = model_state['encoder_layers']
+        model.decoder_layers = model_state['decoder_layers']
+        
+        return model
+    
 
