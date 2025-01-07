@@ -11,22 +11,46 @@ This implementation includes:
 - Layer normalization
 - Positional encoding
 
+Certainly! Here's a cleaner and more readable version of the project structure for the README:
+
+---
+
 ## Project Structure
-├── model/\
-│ ├── transformer.py # Main Transformer implementation\
-│ ├── encoder.py # Transformer encoder\
-│ ├── decoder.py # Transformer decoder\
-│ ├── attention.py # Multi-head attention mechanism\
-│ └── feedforward.py # Position-wise feedforward network\
-├── data/\
-│ └── dataset.py # Dataset handling\
-├── experiments/\
-│ ├── train.py # Training loop\
-│ └── test.py # Testing and evaluation\
-├── utils/\
-│ └── losses.py # Loss functions\
-├── requirements.txt\
-└── README.md\
+
+The project is organized as follows:
+
+```
+├── model/                          # Core Transformer Model Implementation
+│   ├── transformer.py              # Main Transformer model
+│   ├── encoder.py                 # Transformer encoder
+│   ├── decoder.py                 # Transformer decoder
+│   ├── attention.py               # Multi-head attention mechanism
+│   └── feedforward.py             # Position-wise feedforward network
+│
+├── data/                           # Dataset Handling
+│   └── dataset.py                 # Dataset loading and processing
+│
+├── experiments/                    # Experiment-related scripts
+│   ├── train.py                   # Training loop
+│   └── test.py                    # Testing and evaluation
+│
+├── utils/                          # Utility functions
+│   └── losses.py                  # Loss functions
+│
+├── requirements.txt               # Python package dependencies
+└── README.md                      # Project documentation
+```
+
+### Directory Descriptions:
+
+- **model/**: Contains the core components of the Transformer model including the encoder, decoder, attention mechanism, and feedforward layers.
+- **data/**: Handles loading and preprocessing of datasets for training and evaluation.
+- **experiments/**: Contains scripts to run experiments like training and testing.
+- **utils/**: Includes utility functions such as custom loss functions.
+- **requirements.txt**: Lists the Python dependencies required to run the project.
+- **README.md**: Project overview and documentation.
+
+---
 
 ## Installation
 ```
