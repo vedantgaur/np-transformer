@@ -20,6 +20,33 @@ class Transformer:
         
         self.positional_encoding = self.generate_positional_encoding(max_seq_len, d_model)
 
+        self.encoder_layers = [{
+            'W_Q': np.random.normal(0, 0.02, (d_model, d_model)),
+            'W_K': np.random.normal(0, 0.02, (d_model, d_model)),
+            'W_V': np.random.normal(0, 0.02, (d_model, d_model)),
+            'W_O': np.random.normal(0, 0.02, (d_model, d_model)),
+            'W_1': np.random.normal(0, 0.02, (d_model, d_ff)),
+            'W_2': np.random.normal(0, 0.02, (d_ff, d_model)),
+            'b_1': np.zeros(d_ff),
+            'b_2': np.zeros(d_model),
+        } for _ in range(num_encoder_layers)]
+
+        self.decoder_layers = [{
+            'self_W_Q': np.random.normal(0, 0.02, (d_model, d_model)),
+            'self_W_K': np.random.normal(0, 0.02, (d_model, d_model)),
+            'self_W_V': np.random.normal(0, 0.02, (d_model, d_model)),
+            'cross_W_Q': np.random.normal(0, 0.02, (d_model, d_model)),
+            'cross_W_K': np.random.normal(0, 0.02, (d_model, d_model)),
+            'cross_W_V': np.random.normal(0, 0.02, (d_model, d_model)),
+            'W_O': np.random.normal(0, 0.02, (d_model, d_model)),
+            'W_1': np.random.normal(0, 0.02, (d_model, d_ff)),
+            'W_2': np.random.normal(0, 0.02, (d_ff, d_model)),
+            'b_1': np.zeros(d_ff),
+            'b_2': np.zeros(d_model),
+        } for _ in range(num_decoder_layers)]
+
+        self.training = True
+
     def generate_positional_encoding(self, max_seq_len, d_model):
         pos = np.arange(max_seq_len)[:, np.newaxis]
         i = np.arange(d_model)[np.newaxis, :]
@@ -31,8 +58,11 @@ class Transformer:
         return pos_encoding
     
     def forward(self, src, tgt):
-        src_embedded = src @ self.embedding.T
-        tgt_embedded = tgt @ self.embedding.T
+        assert len(src.shape) == 2, f"Expected src shape (batch_size, seq_len), got {src.shape}"
+        assert len(tgt.shape) == 2, f"Expected tgt shape (batch_size, seq_len), got {tgt.shape}"
+        
+        src_embedded = self.embedding[src]
+        tgt_embedded = self.embedding[tgt]
         
         src_pos = src_embedded + self.positional_encoding[:src.shape[1]]
         tgt_pos = tgt_embedded + self.positional_encoding[:tgt.shape[1]]
@@ -45,11 +75,18 @@ class Transformer:
         for _ in range(self.num_decoder_layers):
             dec_output = decoder(dec_output, enc_output, self.d_ff, self.d_model, self.h)
         
-        logits = dec_output @ self.embedding
+        assert dec_output.shape[-1] == self.d_model, \
+            f"Expected decoder output dim {self.d_model}, got {dec_output.shape[-1]}"
+        
+        logits = dec_output @ self.embedding.T
+        
+        assert logits.shape == (src.shape[0], tgt.shape[1], self.vocab_size), \
+            f"Expected logits shape {(src.shape[0], tgt.shape[1], self.vocab_size)}, got {logits.shape}"
+        
         return logits
     
     def backward(self, src, tgt, grad_output):
-        grad_embedding = grad_output
+        grad_embedding = grad_output @ np.eye(self.vocab_size)
         grad_dec_output = grad_output @ self.embedding
 
         grad_dec = grad_dec_output
@@ -76,10 +113,20 @@ class Transformer:
         grad_src_embed = grad_enc
         grad_tgt_embed = grad_dec
 
+        src_one_hot = np.eye(self.vocab_size)[src]
+        tgt_one_hot = np.eye(self.vocab_size)[tgt]
+        
+        grad_src = grad_src_embed.reshape(-1, self.d_model).T @ src_one_hot.reshape(-1, self.vocab_size)
+        grad_tgt = grad_tgt_embed.reshape(-1, self.d_model).T @ tgt_one_hot.reshape(-1, self.vocab_size)
+        
+        grad_embedding = np.zeros((self.vocab_size, self.d_model))
+        grad_embedding[:grad_output.shape[0]] = grad_output.reshape(-1, self.d_model)
+        
+        grad_src = grad_src.T
+        grad_tgt = grad_tgt.T
+        
         self.embedding -= self.learning_rate * (
-            grad_src_embed.T @ src + 
-            grad_tgt_embed.T @ tgt + 
-            grad_embedding
+            grad_src + grad_tgt + grad_embedding
         )
 
         return {
@@ -87,5 +134,13 @@ class Transformer:
             'grad_src_embed': grad_src_embed,
             'grad_tgt_embed': grad_tgt_embed
         }
+    
+    def train(self):
+        """Set the model to training mode"""
+        self.training = True
+    
+    def eval(self):
+        """Set the model to evaluation mode"""
+        self.training = False
     
 
