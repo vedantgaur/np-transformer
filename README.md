@@ -11,8 +11,6 @@ This implementation includes:
 - Layer normalization
 - Positional encoding
 
-Certainly! Here's a cleaner and more readable version of the project structure for the README:
-
 ---
 
 ## Project Structure
